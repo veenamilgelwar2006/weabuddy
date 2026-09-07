@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>WeaBuddy - Weather Recommendation Chatbot</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Poppins:wght@500;600;700;800&display=swap"
+        rel="stylesheet"
+    >
+
+    <link
+        rel="stylesheet"
+        href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"
+    >
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- Background -->
+    <div class="background-decoration decoration-one"></div>
+    <div class="background-decoration decoration-two"></div>
+
+    <!-- NAVBAR -->
+    <header class="navbar">
+
+        <div class="logo-area">
+            <div class="logo-icon">
+                <i class="fa-solid fa-cloud-sun"></i>
+            </div>
+
+            <div>
+                <h1>WeaBuddy</h1>
+                <span>Weather • Recommendations • AI</span>
+            </div>
+        </div>
+
+        <div class="nav-actions">
+
+            <button
+                class="icon-button"
+                id="unitToggle"
+                title="Change temperature unit"
+            >
+                °C
+            </button>
+
+            <button
+                class="icon-button"
+                id="themeToggle"
+                title="Toggle theme"
+            >
+                <i class="fa-solid fa-moon"></i>
+            </button>
+
+            <button
+                class="location-button"
+                id="locationButton"
+            >
+                <i class="fa-solid fa-location-crosshairs"></i>
+                <span>My Location</span>
+            </button>
+
+        </div>
+
+    </header>
+
+
+    <!-- MAIN -->
+    <main class="container">
+
+        <!-- HERO -->
+        <section class="hero-section">
+
+            <div class="hero-content">
+
+                <div class="hero-badge">
+                    <span class="pulse-dot"></span>
+                    Live Weather Assistant
+                </div>
+
+                <h2>
+                    Your Weather.
+                    <span>Your Decisions.</span>
+                </h2>
+
+                <p>
+                    Get live weather information and smart recommendations
+                    for what to wear, where to go, what to do and more.
+                </p>
+
+                <!-- SEARCH -->
+                <div class="search-container">
+
+                    <div class="search-box">
+
+                        <i class="fa-solid fa-magnifying-glass"></i>
+
+                        <input
+                            type="text"
+                            id="cityInput"
+                            placeholder="Search city... e.g. Nagpur"
+                            autocomplete="off"
+                        >
+
+                        <button id="searchButton">
+                            Search
+                        </button>
+
+                    </div>
+
+                    <div
+                        class="search-suggestions"
+                        id="searchSuggestions"
+                    ></div>
+
+                </div>
+
+                <!-- FAVORITES -->
+                <div class="favorites-row" id="favoritesRow">
+                    <!-- Generated using JS -->
+                </div>
+
+            </div>
+
+            <div class="hero-visual">
+
+                <div class="sun">
+                    <div class="sun-core"></div>
+                </div>
+
+                <div class="cloud cloud-one"></div>
+                <div class="cloud cloud-two"></div>
+
+            </div>
+
+        </section>
+
+
+        <!-- LOADING -->
+        <div class="loading-overlay" id="loadingOverlay">
+
+            <div class="loader-card">
+
+                <div class="loader"></div>
+
+                <h3>Checking the skies...</h3>
+
+                <p>
+                    Getting the latest weather information
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- ERROR -->
+        <div class="error-message" id="errorMessage">
+
+            <i class="fa-solid fa-circle-exclamation"></i>
+
+            <div>
+                <strong>Oops!</strong>
+                <p id="errorText">
+                    Something went wrong.
+                </p>
+            </div>
+
+            <button id="closeError">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+
+        </div>
+
+
+        <!-- WEATHER DASHBOARD -->
+        <section id="weatherDashboard" class="dashboard hidden">
+
+            <!-- LOCATION HEADER -->
+            <div class="location-header">
+
+                <div>
+
+                    <div class="location-title">
+
+                        <i class="fa-solid fa-location-dot"></i>
+
+                        <h2 id="cityName">
+                            Nagpur
+                        </h2>
+
+                        <button
+                            class="favorite-button"
+                            id="favoriteButton"
+                            title="Add to favorites"
+                        >
+                            <i class="fa-regular fa-star"></i>
+                        </button>
+
+                    </div>
+
+                    <p id="locationCountry">
+                        Maharashtra, India
+                    </p>
+
+                </div>
+
+                <div class="local-time">
+
+                    <span>Local Time</span>
+
+                    <strong id="localTime">
+                        --:--
+                    </strong>
+
+                    <small id="currentDate">
+                        ---
+                    </small>
+
+                </div>
+
+            </div>
+
+
+            <!-- MAIN WEATHER GRID -->
+            <div class="weather-grid">
+
+                <!-- CURRENT WEATHER -->
+                <div class="weather-card current-weather-card">
+
+                    <div class="weather-card-top">
+
+                        <div>
+
+                            <span class="weather-label">
+                                CURRENT WEATHER
+                            </span>
+
+                            <div class="temperature-row">
+
+                                <h3 id="temperature">
+                                    --°
+                                </h3>
+
+                                <div>
+                                    <p id="weatherDescription">
+                                        Loading...
+                                    </p>
+
+                                    <span id="feelsLike">
+                                        Feels like --°
+                                    </span>
+                                </div>
+
+                            </div>
+
+                        </div>
+
+                        <img
+                            id="weatherIcon"
+                            class="weather-icon"
+                            src=""
+                            alt="Weather"
+                        >
+
+                    </div>
+
+                    <div class="weather-minmax">
+
+                        <span>
+                            <i class="fa-solid fa-temperature-arrow-up"></i>
+                            <b id="maxTemp">--°</b>
+                        </span>
+
+                        <span>
+                            <i class="fa-solid fa-temperature-arrow-down"></i>
+                            <b id="minTemp">--°</b>
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <!-- WEATHER STATS -->
+                <div class="weather-card stats-card">
+
+                    <div class="card-heading">
+
+                        <div>
+                            <span>WEATHER DETAILS</span>
+                            <h3>Today's Conditions</h3>
+                        </div>
+
+                        <i class="fa-solid fa-chart-simple"></i>
+
+                    </div>
+
+                    <div class="stats-grid">
+
+                        <div class="stat-item">
+
+                            <div class="stat-icon">
+                                <i class="fa-solid fa-droplet"></i>
+                            </div>
+
+                            <div>
+                                <span>Humidity</span>
+                                <strong id="humidity">--%</strong>
+                            </div>
+
+                        </div>
+
+
+                        <div class="stat-item">
+
+                            <div class="stat-icon">
+                                <i class="fa-solid fa-wind"></i>
+                            </div>
+
+                            <div>
+                                <span>Wind</span>
+                                <strong id="windSpeed">--</strong>
+                            </div>
+
+                        </div>
+
+
+                        <div class="stat-item">
+
+                            <div class="stat-icon">
+                                <i class="fa-solid fa-compass"></i>
+                            </div>
+
+                            <div>
+                                <span>Direction</span>
+                                <strong id="windDirection">--</strong>
+                            </div>
+
+                        </div>
+
+
+                        <div class="stat-item">
+
+                            <div class="stat-icon">
+                                <i class="fa-solid fa-gauge-high"></i>
+                            </div>
+
+                            <div>
+                                <span>Pressure</span>
+                                <strong id="pressure">--</strong>
+                            </div>
+
+                        </div>
+
+
+                        <div class="stat-item">
+
+                            <div class="stat-icon">
+                                <i class="fa-solid fa-eye"></i>
+                            </div>
+
+                            <div>
+                                <span>Visibility</span>
+                                <strong id="visibility">--</strong>
+                            </div>
+
+                        </div>
+
+
+                        <div class="stat-item">
+
+                            <div class="stat-icon">
+                                <i class="fa-solid fa-cloud"></i>
+                            </div>
+
+                            <div>
+                                <span>Cloudiness</span>
+                                <strong id="cloudiness">--</strong>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- SUN INFORMATION -->
+            <div class="sun-grid">
+
+                <div class="sun-card">
+
+                    <div class="sun-card-icon sunrise">
+                        <i class="fa-solid fa-sun"></i>
+                    </div>
+
+                    <div>
+                        <span>Sunrise</span>
+                        <strong id="sunrise">--:--</strong>
+                    </div>
+
+                </div>
+
+
+                <div class="sun-card">
+
+                    <div class="sun-card-icon sunset">
+                        <i class="fa-solid fa-moon"></i>
+                    </div>
+
+                    <div>
+                        <span>Sunset</span>
+                        <strong id="sunset">--:--</strong>
+                    </div>
+
+                </div>
+
+
+                <div class="sun-card">
+
+                    <div class="sun-card-icon">
+                        <i class="fa-solid fa-umbrella"></i>
+                    </div>
+
+                    <div>
+                        <span>Rain Chance</span>
+                        <strong id="rainChance">--</strong>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- RECOMMENDATIONS -->
+            <section class="recommendations-section">
+
+                <div class="section-heading">
+
+                    <div>
+
+                        <span>SMART RECOMMENDATIONS</span>
+
+                        <h2>
+                            What should you do today?
+                        </h2>
+
+                    </div>
+
+                    <div class="ai-badge">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        Weather AI
+                    </div>
+
+                </div>
+
+
+                <div class="recommendation-grid">
+
+                    <!-- CLOTHING -->
+                    <div class="recommendation-card">
+
+                        <div class="recommendation-icon clothing">
+                            <i class="fa-solid fa-shirt"></i>
+                        </div>
+
+                        <div>
+
+                            <span>WHAT TO WEAR</span>
+
+                            <h3 id="clothingTitle">
+                                Checking...
+                            </h3>
+
+                            <p id="clothingText">
+                                Weather-based clothing recommendation.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- UMBRELLA -->
+                    <div class="recommendation-card">
+
+                        <div class="recommendation-icon rain">
+                            <i class="fa-solid fa-umbrella"></i>
+                        </div>
+
+                        <div>
+
+                            <span>RAIN CHECK</span>
+
+                            <h3 id="umbrellaTitle">
+                                Checking...
+                            </h3>
+
+                            <p id="umbrellaText">
+                                Checking rain conditions.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- ACTIVITY -->
+                    <div class="recommendation-card">
+
+                        <div class="recommendation-icon activity">
+                            <i class="fa-solid fa-person-running"></i>
+                        </div>
+
+                        <div>
+
+                            <span>ACTIVITY</span>
+
+                            <h3 id="activityTitle">
+                                Checking...
+                            </h3>
+
+                            <p id="activityText">
+                                Finding the best activity.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- TRAVEL -->
+                    <div class="recommendation-card">
+
+                        <div class="recommendation-icon travel">
+                            <i class="fa-solid fa-car-side"></i>
+                        </div>
+
+                        <div>
+
+                            <span>TRAVEL</span>
+
+                            <h3 id="travelTitle">
+                                Checking...
+                            </h3>
+
+                            <p id="travelText">
+                                Checking travel conditions.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- HYDRATION -->
+                    <div class="recommendation-card">
+
+                        <div class="recommendation-icon hydration">
+                            <i class="fa-solid fa-glass-water"></i>
+                        </div>
+
+                        <div>
+
+                            <span>HYDRATION</span>
+
+                            <h3 id="hydrationTitle">
+                                Checking...
+                            </h3>
+
+                            <p id="hydrationText">
+                                Weather-based hydration reminder.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- SUN -->
+                    <div class="recommendation-card">
+
+                        <div class="recommendation-icon sun-protection">
+                            <i class="fa-solid fa-sun"></i>
+                        </div>
+
+                        <div>
+
+                            <span>SUN & COMFORT</span>
+
+                            <h3 id="sunTitle">
+                                Checking...
+                            </h3>
+
+                            <p id="sunText">
+                                Checking outdoor comfort.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- AQI -->
+            <section class="air-quality-section">
+
+                <div class="air-quality-card">
+
+                    <div class="aqi-left">
+
+                        <div class="aqi-icon">
+                            <i class="fa-solid fa-lungs"></i>
+                        </div>
+
+                        <div>
+
+                            <span>AIR QUALITY</span>
+
+                            <h2 id="aqiTitle">
+                                Loading...
+                            </h2>
+
+                            <p id="aqiDescription">
+                                Checking air quality.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="aqi-score">
+
+                        <strong id="aqiValue">
+                            --
+                        </strong>
+
+                        <span>
+                            AQI
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+
+            <!-- FORECAST -->
+            <section class="forecast-section">
+
+                <div class="section-heading">
+
+                    <div>
+
+                        <span>WEATHER FORECAST</span>
+
+                        <h2>
+                            Next 5 Days
+                        </h2>
+
+                    </div>
+
+                </div>
+
+                <div
+                    class="forecast-grid"
+                    id="forecastGrid"
+                >
+                    <!-- JS generated -->
+                </div>
+
+            </section>
+
+
+            <!-- CHATBOT -->
+            <section class="chatbot-section">
+
+                <div class="chatbot-header">
+
+                    <div class="chatbot-title">
+
+                        <div class="bot-avatar">
+                            <i class="fa-solid fa-robot"></i>
+                        </div>
+
+                        <div>
+
+                            <span>WEABUDDY AI</span>
+
+                            <h2>
+                                Ask me about the weather
+                            </h2>
+
+                        </div>
+
+                    </div>
+
+                    <button
+                        class="clear-chat"
+                        id="clearChat"
+                    >
+                        <i class="fa-solid fa-trash"></i>
+                        Clear
+                    </button>
+
+                </div>
+
+
+                <!-- QUICK QUESTIONS -->
+                <div class="quick-questions">
+
+                    <button data-question="What should I wear today?">
+                        👕 What should I wear?
+                    </button>
+
+                    <button data-question="Should I carry an umbrella?">
+                        ☂️ Should I carry an umbrella?
+                    </button>
+
+                    <button data-question="Is it good for outdoor activities?">
+                        🏃 Outdoor activities?
+                    </button>
+
+                    <button data-question="Is it good for travelling?">
+                        🚗 Is it good for travelling?
+                    </button>
+
+                </div>
+
+
+                <!-- CHAT -->
+                <div
+                    class="chat-window"
+                    id="chatWindow"
+                >
+
+                    <div class="chat-message bot-message">
+
+                        <div class="message-avatar">
+                            <i class="fa-solid fa-cloud-sun"></i>
+                        </div>
+
+                        <div class="message-content">
+
+                            <span class="message-name">
+                                WeaBuddy
+                            </span>
+
+                            <p>
+                                Hey! 👋 I'm WeaBuddy. Ask me anything
+                                about today's weather and I'll give you
+                                a practical recommendation.
+                            </p>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- CHAT INPUT -->
+                <div class="chat-input-area">
+
+                    <input
+                        type="text"
+                        id="chatInput"
+                        placeholder="Ask something like 'Should I carry an umbrella?'"
+                    >
+
+                    <button id="sendMessage">
+
+                        <i class="fa-solid fa-paper-plane"></i>
+
+                    </button>
+
+                </div>
+
+            </section>
+
+        </section>
+
+    </main>
+
+
+    <!-- FOOTER -->
+    <footer>
+
+        <div class="footer-content">
+
+            <div class="footer-logo">
+
+                <div class="logo-icon">
+                    <i class="fa-solid fa-cloud-sun"></i>
+                </div>
+
+                <div>
+                    <strong>WeaBuddy</strong>
+                    <span>Smart Weather Recommendation System</span>
+                </div>
+
+            </div>
+
+            <p>
+                Weather data powered by OpenWeather API
+            </p>
+
+        </div>
+
+        <div class="footer-bottom">
+            Built with HTML • CSS • JavaScript
+        </div>
+
+    </footer>
+
+
+    <script src="script.js"></script>
+
+</body>
+</html>
