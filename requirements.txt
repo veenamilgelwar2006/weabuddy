@@ -1,12 +1,6 @@
-<<<<<<< HEAD
 Flask
 flask-cors
 google-genai
 Pillow
 python-dotenv
 gunicorn
-=======
-Flask
-Flask-CORS
-gunicorn
->>>>>>> 173abe5 (Prepare WeaBuddy for deployment)
