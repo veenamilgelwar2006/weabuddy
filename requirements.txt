@@ -1,2 +1,6 @@
 Flask
-Flask-CORS
+flask-cors
+google-genai
+Pillow
+python-dotenv
+gunicorn
