@@ -1,7 +1,7 @@
 /* =========================================================
    WEABUDDY
    Intelligent Weather Recommendation Chatbot
-   HTML + CSS + JavaScript + OpenWeather API
+   HTML + CSS + JavaScript + OpenWeather API + Flask
 ========================================================= */
 
 
@@ -24,6 +24,12 @@ const AIR_API =
     "https://api.openweathermap.org/data/2.5/air_pollution";
 
 
+/*
+   Python Flask Backend
+*/
+const FLASK_API = "";
+
+
 /* =========================================================
    2. APPLICATION STATE
 ========================================================= */
@@ -31,6 +37,7 @@ const AIR_API =
 let currentWeather = null;
 let currentForecast = null;
 let currentAirQuality = null;
+let currentPythonAnalysis = null;
 let currentCity = "";
 
 let currentUnit =
@@ -393,6 +400,8 @@ async function loadWeatherByCity(city) {
 
     hideError();
 
+    currentPythonAnalysis = null;
+
     try {
 
         const url =
@@ -433,6 +442,11 @@ async function loadWeatherByCity(city) {
         );
 
         updateDashboard();
+
+        /*
+           Send weather information to Python
+        */
+        await loadPythonWeatherAnalysis();
 
         if (weatherDashboard) {
 
@@ -553,6 +567,8 @@ async function loadWeatherByCoordinates(
 
     hideError();
 
+    currentPythonAnalysis = null;
+
     try {
 
         const url =
@@ -588,6 +604,11 @@ async function loadWeatherByCoordinates(
         );
 
         updateDashboard();
+
+        /*
+           Send location weather information to Python
+        */
+        await loadPythonWeatherAnalysis();
 
         if (weatherDashboard) {
 
@@ -752,6 +773,10 @@ function updateDashboard() {
 
     updateLocalTime();
 
+    /*
+       Existing JavaScript recommendation system
+       remains as the immediate fallback.
+    */
     updateRecommendations();
 
     updateAirQuality();
@@ -761,7 +786,258 @@ function updateDashboard() {
 
 
 /* =========================================================
-   11. WEATHER SCORES
+   11. PYTHON FLASK WEATHER ANALYSIS
+========================================================= */
+
+async function loadPythonWeatherAnalysis() {
+
+    if (!currentWeather) {
+
+        return null;
+    }
+
+    const weather =
+        currentWeather;
+
+    const rain =
+        getRainChance();
+
+    const aqi =
+        currentAirQuality?.list?.[0]?.main?.aqi || 1;
+
+    const weatherData = {
+
+        temperature:
+            weather.main.temp,
+
+        feels_like:
+            weather.main.feels_like,
+
+        humidity:
+            weather.main.humidity,
+
+        wind_speed:
+            weather.wind?.speed || 0,
+
+        rain_chance:
+            rain,
+
+        cloudiness:
+            weather.clouds?.all || 0,
+
+        aqi:
+            aqi
+    };
+
+
+    console.log(
+        "Sending weather data to Python:",
+        weatherData
+    );
+
+
+    try {
+
+        const response =
+            await fetch(
+                `${FLASK_API}/api/analyze`,
+                {
+                    method: "POST",
+
+                    headers: {
+                        "Content-Type":
+                            "application/json"
+                    },
+
+                    body:
+                        JSON.stringify(
+                            weatherData
+                        )
+                }
+            );
+
+
+        if (!response.ok) {
+
+            throw new Error(
+                `Python server returned ${response.status}`
+            );
+        }
+
+
+        const result =
+            await response.json();
+
+
+        console.log(
+            "WeaBuddy Python Analysis:",
+            result
+        );
+
+
+        if (
+            result.status === "success" &&
+            result.data
+        ) {
+
+            currentPythonAnalysis =
+                result.data;
+
+
+            updatePythonRecommendations(
+                result.data
+            );
+
+
+            console.log(
+                "🤖 Python Weather Score:",
+                result.data.weather_score
+            );
+
+
+            console.log(
+                "📝 Python Daily Briefing:",
+                result.data.daily_briefing
+            );
+
+
+            return result.data;
+        }
+
+
+        return null;
+
+    } catch (error) {
+
+        /*
+           IMPORTANT:
+           Flask failure should NOT break WeaBuddy.
+           Existing JavaScript recommendations remain active.
+        */
+
+        console.warn(
+            "Python backend unavailable. Using JavaScript recommendations.",
+            error
+        );
+
+        currentPythonAnalysis =
+            null;
+
+        return null;
+    }
+}
+
+
+/* =========================================================
+   12. APPLY PYTHON RECOMMENDATIONS
+========================================================= */
+
+function updatePythonRecommendations(
+    analysis
+) {
+
+    if (!analysis) return;
+
+
+    console.log(
+        "🤖 Applying Python recommendations:",
+        analysis
+    );
+
+
+    /*
+       CLOTHING
+    */
+
+    setRecommendation(
+        clothingTitle,
+        "AI Clothing Advice 👕"
+    );
+
+    setRecommendation(
+        clothingText,
+        analysis.clothing
+    );
+
+
+    /*
+       UMBRELLA
+    */
+
+    setRecommendation(
+        umbrellaTitle,
+        analysis.umbrella
+    );
+
+    setRecommendation(
+        umbrellaText,
+        `Rain indicator: ${analysis.input.rain_chance}%`
+    );
+
+
+    /*
+       ACTIVITY
+    */
+
+    setRecommendation(
+        activityTitle,
+        `AI Outdoor Score: ${analysis.weather_score}/100`
+    );
+
+    setRecommendation(
+        activityText,
+        analysis.activity
+    );
+
+
+    /*
+       TRAVEL
+    */
+
+    setRecommendation(
+        travelTitle,
+        analysis.condition
+    );
+
+    setRecommendation(
+        travelText,
+        analysis.travel
+    );
+
+
+    /*
+       HYDRATION
+    */
+
+    setRecommendation(
+        hydrationTitle,
+        "Smart Hydration Advice 💧"
+    );
+
+    setRecommendation(
+        hydrationText,
+        analysis.hydration
+    );
+
+
+    /*
+       SUN
+    */
+
+    setRecommendation(
+        sunTitle,
+        "AI Sun Protection ☀️"
+    );
+
+    setRecommendation(
+        sunText,
+        analysis.sun_protection
+    );
+}
+
+
+/* =========================================================
+   13. WEATHER SCORES
 ========================================================= */
 
 function calculateWeatherScores() {
@@ -775,6 +1051,54 @@ function calculateWeatherScores() {
             rainRisk: 0
         };
     }
+
+
+    /*
+       If Python analysis is available,
+       use its main weather score as the
+       outdoor score.
+    */
+
+    if (
+        currentPythonAnalysis &&
+        typeof currentPythonAnalysis.weather_score ===
+            "number"
+    ) {
+
+        const pythonScore =
+            clamp(
+                Math.round(
+                    currentPythonAnalysis.weather_score
+                ),
+                0,
+                100
+            );
+
+
+        return {
+
+            outdoor:
+                pythonScore,
+
+            travel:
+                pythonScore,
+
+            comfort:
+                pythonScore,
+
+            rainRisk:
+                clamp(
+                    getRainChance(),
+                    0,
+                    100
+                )
+        };
+    }
+
+
+    /*
+       JavaScript fallback scoring
+    */
 
     const weather =
         currentWeather;
@@ -906,6 +1230,7 @@ function calculateWeatherScores() {
         }
     }
 
+
     return {
 
         outdoor:
@@ -940,7 +1265,7 @@ function calculateWeatherScores() {
 
 
 /* =========================================================
-   12. RECOMMENDATIONS
+   14. RECOMMENDATIONS
 ========================================================= */
 
 function updateRecommendations() {
@@ -982,6 +1307,7 @@ function updateRecommendations() {
             humidityValue,
             weatherId
         );
+
 
     setRecommendation(
         clothingTitle,
@@ -1205,7 +1531,7 @@ function updateRecommendations() {
 
 
 /* =========================================================
-   13. AIR QUALITY
+   15. AIR QUALITY
 ========================================================= */
 
 function updateAirQuality() {
@@ -1230,11 +1556,13 @@ function updateAirQuality() {
         return;
     }
 
+
     const aqi =
         currentAirQuality.list[0].main.aqi;
 
     const information =
         getAQIInformation(aqi);
+
 
     setText(
         aqiValue,
@@ -1288,8 +1616,11 @@ function getAQIInformation(aqi) {
         }
     };
 
+
     return data[aqi] || {
+
         title: "Unknown",
+
         description:
             "Air quality information unavailable."
     };
@@ -1297,12 +1628,13 @@ function getAQIInformation(aqi) {
 
 
 /* =========================================================
-   14. FORECAST
+   16. FORECAST
 ========================================================= */
 
 function updateForecast() {
 
     if (!forecastGrid) return;
+
 
     if (!currentForecast?.list) {
 
@@ -1312,8 +1644,10 @@ function updateForecast() {
         return;
     }
 
+
     const dailyForecasts =
         getDailyForecasts();
+
 
     forecastGrid.innerHTML =
         dailyForecasts
@@ -1356,10 +1690,13 @@ function updateForecast() {
 function getDailyForecasts() {
 
     if (!currentForecast?.list) {
+
         return [];
     }
 
+
     const grouped = {};
+
 
     currentForecast.list.forEach(
         item => {
@@ -1371,13 +1708,17 @@ function getDailyForecasts() {
                     "en-CA"
                 );
 
+
             if (!grouped[date]) {
+
                 grouped[date] = [];
             }
+
 
             grouped[date].push(item);
         }
     );
+
 
     return Object.entries(grouped)
         .slice(0, 5)
@@ -1390,6 +1731,7 @@ function getDailyForecasts() {
                             items.length / 2
                         )
                     ];
+
 
                 return {
 
@@ -1421,7 +1763,7 @@ function getDailyForecasts() {
 
 
 /* =========================================================
-   15. CITY SUGGESTIONS
+   17. CITY SUGGESTIONS
 ========================================================= */
 
 async function handleCitySuggestions() {
@@ -1430,20 +1772,26 @@ async function handleCitySuggestions() {
         !cityInput ||
         !searchSuggestions
     ) {
+
         return;
     }
+
 
     const query =
         cityInput.value.trim();
 
+
     if (query.length < 2) {
 
-        searchSuggestions.innerHTML = "";
+        searchSuggestions.innerHTML =
+            "";
 
         return;
     }
 
+
     if (!isAPIReady()) return;
+
 
     try {
 
@@ -1452,13 +1800,17 @@ async function handleCitySuggestions() {
             `&limit=5` +
             `&appid=${API_KEY}`;
 
+
         const response =
             await fetch(url);
 
+
         if (!response.ok) return;
+
 
         const cities =
             await response.json();
+
 
         searchSuggestions.innerHTML =
             cities
@@ -1469,6 +1821,7 @@ async function handleCitySuggestions() {
                             class="search-suggestion"
                             data-city="${escapeHTML(city.name)}"
                         >
+
                             <strong>
                                 ${escapeHTML(city.name)}
                             </strong>
@@ -1477,6 +1830,7 @@ async function handleCitySuggestions() {
                                 ${escapeHTML(
                                     city.state || ""
                                 )}
+
                                 ${
                                     city.country
                                         ? ", " +
@@ -1486,6 +1840,7 @@ async function handleCitySuggestions() {
                                         : ""
                                 }
                             </span>
+
                         </div>
                     `;
 
@@ -1519,6 +1874,7 @@ async function handleCitySuggestions() {
                 );
             });
 
+
     } catch (error) {
 
         console.warn(
@@ -1530,7 +1886,7 @@ async function handleCitySuggestions() {
 
 
 /* =========================================================
-   16. CURRENT LOCATION
+   18. CURRENT LOCATION
 ========================================================= */
 
 function getCurrentLocation() {
@@ -1544,7 +1900,9 @@ function getCurrentLocation() {
         return;
     }
 
+
     showLoading();
+
 
     navigator.geolocation.getCurrentPosition(
 
@@ -1565,6 +1923,7 @@ function getCurrentLocation() {
 
             hideLoading();
 
+
             showError(
                 "Unable to access your location. Please allow location permission or search for a city manually."
             );
@@ -1574,12 +1933,13 @@ function getCurrentLocation() {
 
 
 /* =========================================================
-   17. FAVORITES
+   19. FAVORITES
 ========================================================= */
 
 function toggleFavorite() {
 
     if (!currentCity) return;
+
 
     const index =
         favorites.findIndex(
@@ -1587,6 +1947,7 @@ function toggleFavorite() {
                 city.toLowerCase() ===
                 currentCity.toLowerCase()
         );
+
 
     if (index >= 0) {
 
@@ -1602,10 +1963,12 @@ function toggleFavorite() {
         );
     }
 
+
     localStorage.setItem(
         "weabuddyFavorites",
         JSON.stringify(favorites)
     );
+
 
     renderFavorites();
 
@@ -1617,6 +1980,7 @@ function renderFavorites() {
 
     if (!favoritesRow) return;
 
+
     if (favorites.length === 0) {
 
         favoritesRow.innerHTML =
@@ -1624,6 +1988,7 @@ function renderFavorites() {
 
         return;
     }
+
 
     favoritesRow.innerHTML =
         favorites
@@ -1665,6 +2030,7 @@ function updateFavoriteButton() {
 
     if (!favoriteButton) return;
 
+
     const isFavorite =
         favorites.some(
             city =>
@@ -1672,10 +2038,12 @@ function updateFavoriteButton() {
                 currentCity.toLowerCase()
         );
 
+
     favoriteButton.innerHTML =
         isFavorite
             ? "★"
             : "☆";
+
 
     favoriteButton.title =
         isFavorite
@@ -1685,7 +2053,7 @@ function updateFavoriteButton() {
 
 
 /* =========================================================
-   18. UNITS
+   20. UNITS
 ========================================================= */
 
 function toggleUnit() {
@@ -1695,12 +2063,15 @@ function toggleUnit() {
             ? "imperial"
             : "metric";
 
+
     localStorage.setItem(
         "weabuddyUnit",
         currentUnit
     );
 
+
     updateUnitButton();
+
 
     if (currentCity) {
 
@@ -1714,6 +2085,7 @@ function toggleUnit() {
 function updateUnitButton() {
 
     if (!unitToggle) return;
+
 
     unitToggle.textContent =
         currentUnit === "metric"
@@ -1737,12 +2109,13 @@ function formatWindSpeed(speed) {
         return `${speed.toFixed(1)} m/s`;
     }
 
+
     return `${speed.toFixed(1)} mph`;
 }
 
 
 /* =========================================================
-   19. THEME
+   21. THEME
 ========================================================= */
 
 function toggleTheme() {
@@ -1751,10 +2124,12 @@ function toggleTheme() {
         "dark-mode"
     );
 
+
     const darkMode =
         document.body.classList.contains(
             "dark-mode"
         );
+
 
     localStorage.setItem(
         "weabuddyTheme",
@@ -1772,6 +2147,7 @@ function loadTheme() {
             "weabuddyTheme"
         );
 
+
     if (theme === "dark") {
 
         document.body.classList.add(
@@ -1782,26 +2158,30 @@ function loadTheme() {
 
 
 /* =========================================================
-   20. LOCAL TIME
+   22. LOCAL TIME
 ========================================================= */
 
 function updateLocalTime() {
 
     if (!currentWeather) return;
 
+
     const timezoneOffset =
         currentWeather.timezone || 0;
+
 
     const utcNow =
         Date.now() +
         new Date().getTimezoneOffset() *
         60000;
 
+
     const cityDate =
         new Date(
             utcNow +
             timezoneOffset * 1000
         );
+
 
     if (localTime) {
 
@@ -1814,6 +2194,7 @@ function updateLocalTime() {
                 }
             );
     }
+
 
     if (currentDate) {
 
@@ -1831,7 +2212,7 @@ function updateLocalTime() {
 
 
 /* =========================================================
-   21. WEATHER HELPERS
+   23. WEATHER HELPERS
 ========================================================= */
 
 function getWindDirection(degrees) {
@@ -1840,8 +2221,10 @@ function getWindDirection(degrees) {
         degrees === undefined ||
         degrees === null
     ) {
+
         return "N/A";
     }
+
 
     const directions = [
         "N",
@@ -1854,10 +2237,12 @@ function getWindDirection(degrees) {
         "NW"
     ];
 
+
     const index =
         Math.round(
             degrees / 45
         ) % 8;
+
 
     return directions[index];
 }
@@ -1866,8 +2251,10 @@ function getWindDirection(degrees) {
 function formatTime(timestamp) {
 
     if (!timestamp) {
+
         return "N/A";
     }
+
 
     return new Date(
         timestamp * 1000
@@ -1894,7 +2281,9 @@ function getRainChance() {
                 8
             );
 
+
         let maximum = 0;
+
 
         periods.forEach(
             period => {
@@ -1902,6 +2291,7 @@ function getRainChance() {
                 const probability =
                     (period.pop || 0) *
                     100;
+
 
                 maximum =
                     Math.max(
@@ -1911,10 +2301,12 @@ function getRainChance() {
             }
         );
 
+
         return Math.round(
             maximum
         );
     }
+
 
     if (
         currentWeather &&
@@ -1924,12 +2316,13 @@ function getRainChance() {
         return 80;
     }
 
+
     return 10;
 }
 
 
 /* =========================================================
-   22. CHATBOT
+   24. CHATBOT
 ========================================================= */
 
 function setupQuickQuestions() {
@@ -1947,11 +2340,13 @@ function setupQuickQuestions() {
                     const question =
                         button.dataset.question;
 
+
                     if (chatInput) {
 
                         chatInput.value =
                             question;
                     }
+
 
                     sendChatMessage();
                 }
@@ -1966,25 +2361,32 @@ function sendChatMessage() {
         !chatInput ||
         !chatWindow
     ) {
+
         return;
     }
+
 
     const message =
         chatInput.value.trim();
 
+
     if (!message) return;
+
 
     addUserMessage(
         message
     );
 
+
     chatInput.value =
         "";
+
 
     const response =
         processChatMessage(
             message
         );
+
 
     setTimeout(
         () => {
@@ -2143,6 +2545,7 @@ Try asking:
             return "I need the current weather data first. 🌤️";
         }
 
+
         return `
 🌡️ Maximum Temperature
 
@@ -2162,6 +2565,7 @@ Today's maximum temperature in ${currentCity} is approximately ${Math.round(curr
 
             return "I need the current weather data first. 🌤️";
         }
+
 
         return `
 🌡️ Minimum Temperature
@@ -2183,15 +2587,18 @@ Today's minimum temperature in ${currentCity} is approximately ${Math.round(curr
             return "I need the current weather data first. 🌤️";
         }
 
+
         const temp =
             Math.round(
                 currentWeather.main.temp
             );
 
+
         const feels =
             Math.round(
                 currentWeather.main.feels_like
             );
+
 
         return `
 🌡️ Temperature in ${currentCity}
@@ -2241,8 +2648,10 @@ ${
             return "I need the current weather data first. 🌤️";
         }
 
+
         const rain =
             getRainChance();
+
 
         if (rain >= 70) {
 
@@ -2288,8 +2697,10 @@ Rain doesn't look very likely in the upcoming forecast period.
             calculateWeatherScores()
                 .outdoor;
 
+
         const rain =
             getRainChance();
+
 
         if (
             score >= 75 &&
@@ -2305,6 +2716,7 @@ Outdoor score: ${score}/100
 Rain chance indicator: ${rain}%
             `;
         }
+
 
         return `
 🧺 Picnic Recommendation
@@ -2330,6 +2742,7 @@ You may want to choose a more comfortable time.
             calculateWeatherScores()
                 .outdoor;
 
+
         if (score >= 80) {
 
             return `
@@ -2351,6 +2764,7 @@ Outdoor activity is possible, but conditions aren't perfect.
             `;
         }
 
+
         return `
 ⚠️ Sports & Exercise
 
@@ -2371,6 +2785,7 @@ The current weather isn't ideal for longer outdoor activity.
         const score =
             calculateWeatherScores()
                 .outdoor;
+
 
         return `
 🏃 Outdoor Activity
@@ -2399,8 +2814,10 @@ ${
             calculateWeatherScores()
                 .travel;
 
+
         const rain =
             getRainChance();
+
 
         return `
 🚗 Travel Recommendation
@@ -2431,8 +2848,10 @@ ${
             return "I need the current weather data first. 🌤️";
         }
 
+
         const humidityValue =
             currentWeather.main.humidity;
+
 
         return `
 💧 Humidity in ${currentCity}
@@ -2466,6 +2885,7 @@ ${
             return "I need the current weather data first. 🌤️";
         }
 
+
         return `
 🧭 Wind Direction
 
@@ -2485,6 +2905,7 @@ The wind is currently from the ${getWindDirection(currentWeather.wind.deg)} dire
 
             return "I need the current weather data first. 🌤️";
         }
+
 
         return `
 💨 Wind Information
@@ -2513,6 +2934,7 @@ ${
             return "I need the current weather data first. 🌤️";
         }
 
+
         return `
 🌡️ Atmospheric Pressure
 
@@ -2533,6 +2955,7 @@ Pressure in ${currentCity}: ${currentWeather.main.pressure} hPa
             return "I need the current weather data first. 🌤️";
         }
 
+
         const value =
             currentWeather.visibility
                 ? (
@@ -2540,6 +2963,7 @@ Pressure in ${currentCity}: ${currentWeather.main.pressure} hPa
                     1000
                 ).toFixed(1)
                 : "N/A";
+
 
         return `
 👀 Visibility
@@ -2567,8 +2991,10 @@ ${
             return "I need the current weather data first. 🌤️";
         }
 
+
         const clouds =
             currentWeather.clouds?.all ?? 0;
+
 
         return `
 ☁️ Cloud Coverage
@@ -2598,12 +3024,15 @@ ${
             return "🌿 Air quality information is currently unavailable.";
         }
 
+
         const aqi =
             currentAirQuality.list[0]
                 .main.aqi;
 
+
         const information =
             getAQIInformation(aqi);
+
 
         return `
 🌿 Air Quality
@@ -2628,11 +3057,14 @@ ${information.description}
             return "I need the current weather data first. 🌤️";
         }
 
+
         const temp =
             currentWeather.main.temp;
 
+
         const humidityValue =
             currentWeather.main.humidity;
+
 
         return `
 💧 Hydration Reminder
@@ -2662,8 +3094,10 @@ ${
             return "I need the current weather data first. 🌤️";
         }
 
+
         const clouds =
             currentWeather.clouds?.all ?? 0;
+
 
         return clouds < 40
 
@@ -2697,6 +3131,7 @@ Reasonable sun protection can still be useful outdoors.
             return "I need the current weather data first. 🌤️";
         }
 
+
         return `
 🌅 Sun Information
 
@@ -2719,7 +3154,9 @@ Sunset: ${formatTime(currentWeather.sys.sunset)}
             return "I need the current weather data first. 🌤️";
         }
 
+
         updateLocalTime();
+
 
         return `
 🕐 Local Time
@@ -2756,6 +3193,20 @@ The current local time in ${currentCity} is ${localTime?.textContent || "unavail
         const scores =
             calculateWeatherScores();
 
+
+        let pythonExtra = "";
+
+
+        if (
+            currentPythonAnalysis &&
+            currentPythonAnalysis.condition
+        ) {
+
+            pythonExtra =
+                `\n🤖 AI Condition: ${currentPythonAnalysis.condition}`;
+        }
+
+
         return `
 ⭐ WeaBuddy Weather Score
 
@@ -2763,8 +3214,42 @@ The current local time in ${currentCity} is ${localTime?.textContent || "unavail
 🚗 Travel: ${scores.travel}/100
 😊 Comfort: ${scores.comfort}/100
 ☔ Rain risk: ${scores.rainRisk}%
+${pythonExtra}
 
 These scores summarize how suitable the current conditions are for different activities.
+        `;
+    }
+
+
+    /* AI / PYTHON */
+
+    if (
+        /\b(ai|intelligent|analysis|recommendation|briefing|smart)\b/
+            .test(text)
+    ) {
+
+        if (!currentPythonAnalysis) {
+
+            return "🤖 Python weather analysis is not available yet. Please wait for the weather analysis to load.";
+        }
+
+
+        return `
+🤖 WeaBuddy AI Analysis
+
+Weather Score: ${currentPythonAnalysis.weather_score}/100
+
+Condition:
+${currentPythonAnalysis.condition}
+
+Daily Briefing:
+${currentPythonAnalysis.daily_briefing}
+
+Travel:
+${currentPythonAnalysis.travel}
+
+Activity:
+${currentPythonAnalysis.activity}
         `;
     }
 
@@ -2803,6 +3288,7 @@ I can help with:
 🕐 Local time
 📅 Forecast
 ⭐ Weather score
+🤖 AI weather analysis
 
 Try asking:
 
@@ -2811,6 +3297,7 @@ Try asking:
 "Can I go cycling?"
 "Is it good for a picnic?"
 "What will tomorrow's weather be like?"
+"Give me AI analysis"
     `;
 }
 
@@ -2826,7 +3313,9 @@ function getForecastChatSummary() {
         return "The forecast isn't available right now.";
     }
 
+
     const days = {};
+
 
     currentForecast.list.forEach(
         item => {
@@ -2836,13 +3325,17 @@ function getForecastChatSummary() {
                     item.dt * 1000
                 ).toLocaleDateString();
 
+
             if (!days[date]) {
+
                 days[date] = [];
             }
+
 
             days[date].push(item);
         }
     );
+
 
     const forecastDays =
         Object.keys(days).slice(
@@ -2850,8 +3343,10 @@ function getForecastChatSummary() {
             5
         );
 
+
     let response =
         `📅 Upcoming Forecast for ${currentCity}\n\n`;
+
 
     forecastDays.forEach(
         (date, index) => {
@@ -2859,21 +3354,25 @@ function getForecastChatSummary() {
             const entries =
                 days[date];
 
+
             const temps =
                 entries.map(
                     item =>
                         item.main.temp
                 );
 
+
             const min =
                 Math.round(
                     Math.min(...temps)
                 );
 
+
             const max =
                 Math.round(
                     Math.max(...temps)
                 );
+
 
             const middle =
                 entries[
@@ -2881,6 +3380,7 @@ function getForecastChatSummary() {
                         entries.length / 2
                     )
                 ];
+
 
             const rain =
                 Math.round(
@@ -2893,6 +3393,7 @@ function getForecastChatSummary() {
                     )
                 );
 
+
             response +=
                 `${index === 0 ? "📍 Today" : "📅 " + date}\n` +
                 `🌡️ ${min}–${max}${getTemperatureUnit()}\n` +
@@ -2900,6 +3401,7 @@ function getForecastChatSummary() {
                 `☔ Rain chance: ${rain}%\n\n`;
         }
     );
+
 
     return response;
 }
@@ -2916,17 +3418,22 @@ function getTomorrowForecast() {
         return "Tomorrow's forecast isn't available right now.";
     }
 
+
     const tomorrow =
         new Date();
+
 
     tomorrow.setDate(
         tomorrow.getDate() + 1
     );
 
+
     const targetDate =
         tomorrow.toLocaleDateString();
 
+
     const groups = {};
+
 
     currentForecast.list.forEach(
         item => {
@@ -2936,29 +3443,37 @@ function getTomorrowForecast() {
                     item.dt * 1000
                 ).toLocaleDateString();
 
+
             if (!groups[date]) {
+
                 groups[date] = [];
             }
+
 
             groups[date].push(item);
         }
     );
 
+
     const dates =
         Object.keys(groups);
+
 
     const selectedDate =
         groups[targetDate]
             ? targetDate
             : dates[1] || dates[0];
 
+
     if (!selectedDate) {
 
         return "Tomorrow's forecast isn't available right now.";
     }
 
+
     const entries =
         groups[selectedDate];
+
 
     const temps =
         entries.map(
@@ -2966,15 +3481,18 @@ function getTomorrowForecast() {
                 item.main.temp
         );
 
+
     const min =
         Math.round(
             Math.min(...temps)
         );
 
+
     const max =
         Math.round(
             Math.max(...temps)
         );
+
 
     const middle =
         entries[
@@ -2982,6 +3500,7 @@ function getTomorrowForecast() {
                 entries.length / 2
             )
         ];
+
 
     const rain =
         Math.round(
@@ -2993,6 +3512,7 @@ function getTomorrowForecast() {
                 )
             )
         );
+
 
     return `
 📅 Tomorrow's Weather — ${currentCity}
@@ -3024,7 +3544,9 @@ function getBestForecastDay() {
         return "The forecast isn't available right now.";
     }
 
+
     const groups = {};
+
 
     currentForecast.list.forEach(
         item => {
@@ -3034,13 +3556,17 @@ function getBestForecastDay() {
                     item.dt * 1000
                 ).toLocaleDateString();
 
+
             if (!groups[date]) {
+
                 groups[date] = [];
             }
+
 
             groups[date].push(item);
         }
     );
+
 
     const results =
         Object.entries(groups)
@@ -3054,6 +3580,7 @@ function getBestForecastDay() {
                                 item.main.temp
                         );
 
+
                     const avgTemp =
                         temps.reduce(
                             (sum, value) =>
@@ -3061,6 +3588,7 @@ function getBestForecastDay() {
                             0
                         ) /
                         temps.length;
+
 
                     const rain =
                         Math.max(
@@ -3071,24 +3599,36 @@ function getBestForecastDay() {
                             )
                         );
 
+
                     let score = 100;
 
+
                     if (avgTemp < 15) {
+
                         score -= 20;
                     }
+
 
                     if (avgTemp > 32) {
+
                         score -= 20;
                     }
+
 
                     if (rain >= 60) {
+
                         score -= 40;
+
                     } else if (rain >= 30) {
+
                         score -= 20;
                     }
 
+
                     return {
+
                         date,
+
                         score:
                             clamp(
                                 Math.round(score),
@@ -3099,18 +3639,22 @@ function getBestForecastDay() {
                 }
             );
 
+
     if (!results.length) {
 
         return "I couldn't determine the best day from the available forecast.";
     }
+
 
     results.sort(
         (a, b) =>
             b.score - a.score
     );
 
+
     const best =
         results[0];
+
 
     return `
 ⭐ Best Weather Day
@@ -3125,7 +3669,7 @@ This is a simple recommendation based mainly on temperature and forecast rain pr
 
 
 /* =========================================================
-   23. CLOTHING ADVICE
+   CLOTHING ADVICE
 ========================================================= */
 
 function getClothingAdvice(
@@ -3140,6 +3684,7 @@ function getClothingAdvice(
     ) {
 
         return {
+
             title:
                 "Rain-ready clothing ☔",
 
@@ -3148,9 +3693,11 @@ function getClothingAdvice(
         };
     }
 
+
     if (temp >= 35) {
 
         return {
+
             title:
                 "Keep it light ☀️",
 
@@ -3159,9 +3706,11 @@ function getClothingAdvice(
         };
     }
 
+
     if (temp >= 28) {
 
         return {
+
             title:
                 "Light & comfortable 👕",
 
@@ -3170,9 +3719,11 @@ function getClothingAdvice(
         };
     }
 
+
     if (temp <= 12) {
 
         return {
+
             title:
                 "Layer up 🧥",
 
@@ -3181,9 +3732,11 @@ function getClothingAdvice(
         };
     }
 
+
     if (temp <= 18) {
 
         return {
+
             title:
                 "Bring a light layer 🧥",
 
@@ -3192,9 +3745,11 @@ function getClothingAdvice(
         };
     }
 
+
     if (humidityValue > 75) {
 
         return {
+
             title:
                 "Breathable clothes 👕",
 
@@ -3202,6 +3757,7 @@ function getClothingAdvice(
                 "Humidity is high, so lightweight and breathable clothing may feel more comfortable."
         };
     }
+
 
     return {
 
@@ -3221,8 +3777,27 @@ function getClothingAdviceText() {
         return "I need the current weather first.";
     }
 
+
     const weather =
         currentWeather;
+
+
+    /*
+       Use Python recommendation when available.
+    */
+
+    if (
+        currentPythonAnalysis &&
+        currentPythonAnalysis.clothing
+    ) {
+
+        return `
+🤖 AI Clothing Advice
+
+${currentPythonAnalysis.clothing}
+        `;
+    }
+
 
     const advice =
         getClothingAdvice(
@@ -3230,6 +3805,7 @@ function getClothingAdviceText() {
             weather.main.humidity,
             weather.weather[0].id
         );
+
 
     return `
 👕 ${advice.title}
@@ -3240,20 +3816,23 @@ ${advice.text}
 
 
 /* =========================================================
-   24. CHAT MESSAGE UI
+   CHAT MESSAGE UI
 ========================================================= */
 
 function addUserMessage(message) {
 
     if (!chatWindow) return;
 
+
     const div =
         document.createElement(
             "div"
         );
 
+
     div.className =
         "chat-message message user-message";
+
 
     div.innerHTML = `
         <div class="message-content">
@@ -3263,9 +3842,11 @@ function addUserMessage(message) {
         </div>
     `;
 
+
     chatWindow.appendChild(
         div
     );
+
 
     scrollChatToBottom();
 }
@@ -3275,13 +3856,16 @@ function addBotMessage(message) {
 
     if (!chatWindow) return;
 
+
     const div =
         document.createElement(
             "div"
         );
 
+
     div.className =
         "chat-message message bot-message";
+
 
     div.innerHTML = `
         <div class="message-avatar">
@@ -3305,9 +3889,11 @@ function addBotMessage(message) {
         </div>
     `;
 
+
     chatWindow.appendChild(
         div
     );
+
 
     scrollChatToBottom();
 }
@@ -3317,8 +3903,10 @@ function clearChatMessages() {
 
     if (!chatWindow) return;
 
+
     chatWindow.innerHTML =
         "";
+
 
     refreshBotGreeting();
 }
@@ -3328,11 +3916,14 @@ function refreshBotGreeting() {
 
     if (!chatWindow) return;
 
+
     if (
         chatWindow.children.length > 0
     ) {
+
         return;
     }
+
 
     const greeting =
         currentCity
@@ -3340,6 +3931,7 @@ function refreshBotGreeting() {
             ? `Hi! 👋 I'm WeaBuddy AI. The weather in ${currentCity} is ready to explore. 🌤️ Ask me about temperature, clothing, rain, travel, sports, AQI, or the forecast.`
 
             : "Hi! 👋 I'm WeaBuddy AI. Ask me anything about the weather.";
+
 
     addBotMessage(
         greeting
@@ -3351,13 +3943,14 @@ function scrollChatToBottom() {
 
     if (!chatWindow) return;
 
+
     chatWindow.scrollTop =
         chatWindow.scrollHeight;
 }
 
 
 /* =========================================================
-   25. UI HELPERS
+   UI HELPERS
 ========================================================= */
 
 function setText(
@@ -3366,6 +3959,7 @@ function setText(
 ) {
 
     if (!element) return;
+
 
     element.textContent =
         value ?? "";
@@ -3378,6 +3972,7 @@ function setRecommendation(
 ) {
 
     if (!element) return;
+
 
     element.textContent =
         value ?? "";
@@ -3404,6 +3999,7 @@ function capitalize(text) {
 
     if (!text) return "";
 
+
     return (
         text.charAt(0).toUpperCase() +
         text.slice(1)
@@ -3412,7 +4008,7 @@ function capitalize(text) {
 
 
 /* =========================================================
-   26. API VALIDATION
+   API VALIDATION
 ========================================================= */
 
 function isAPIReady() {
@@ -3439,12 +4035,14 @@ async function handleAPIError(
         );
     }
 
+
     if (status === 404) {
 
         throw new Error(
             "City not found. Please check the city name."
         );
     }
+
 
     if (status === 429) {
 
@@ -3453,12 +4051,14 @@ async function handleAPIError(
         );
     }
 
+
     if (status >= 500) {
 
         throw new Error(
             "OpenWeather is temporarily unavailable."
         );
     }
+
 
     throw new Error(
         `Weather request failed (${status}).`
@@ -3467,12 +4067,13 @@ async function handleAPIError(
 
 
 /* =========================================================
-   27. LOADING & ERROR UI
+   LOADING & ERROR UI
 ========================================================= */
 
 function showLoading() {
 
     if (!loadingOverlay) return;
+
 
     loadingOverlay.classList.add(
         "active"
@@ -3483,6 +4084,7 @@ function showLoading() {
 function hideLoading() {
 
     if (!loadingOverlay) return;
+
 
     loadingOverlay.classList.remove(
         "active"
@@ -3498,12 +4100,14 @@ function showError(message) {
             message;
     }
 
+
     if (errorMessage) {
 
         errorMessage.classList.add(
             "active"
         );
     }
+
 
     console.error(
         "WeaBuddy:",
@@ -3516,6 +4120,7 @@ function hideError() {
 
     if (!errorMessage) return;
 
+
     errorMessage.classList.remove(
         "active"
     );
@@ -3523,7 +4128,7 @@ function hideError() {
 
 
 /* =========================================================
-   28. DEBOUNCE
+   DEBOUNCE
 ========================================================= */
 
 function debounce(
@@ -3533,11 +4138,13 @@ function debounce(
 
     let timer;
 
+
     return function (...args) {
 
         clearTimeout(
             timer
         );
+
 
         timer =
             setTimeout(
@@ -3552,7 +4159,7 @@ function debounce(
 
 
 /* =========================================================
-   29. SECURITY
+   SECURITY
 ========================================================= */
 
 function escapeHTML(value) {
@@ -3582,12 +4189,13 @@ function escapeHTML(value) {
 
 
 /* =========================================================
-   30. SAVE LAST CITY
+   SAVE LAST CITY
 ========================================================= */
 
 function saveLastCity(city) {
 
     if (!city) return;
+
 
     localStorage.setItem(
         "weabuddyLastCity",
